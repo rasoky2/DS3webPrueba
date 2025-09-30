@@ -1,0 +1,17 @@
+/* Reset mínimo para layout propio con Tailwind */
+html, body, #root {
+  height: 100%;
+}
+body {
+  margin: 0;
+  background: #ffffff;
+  color: #0f172a; /* slate-900 */
+}
+/* Utilidad para ocultar scrollbars (Firefox/WebKit) */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
