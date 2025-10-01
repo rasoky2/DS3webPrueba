@@ -53,3 +53,10 @@ body {
 .zoom-popup.hidden {
   display: none !important;
 }
+
+/* Ocultar zoom en dispositivos móviles */
+@media (max-width: 1023px) {
+  .zoom-popup {
+    display: none !important;
+  }
+}

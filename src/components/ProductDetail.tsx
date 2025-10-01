@@ -52,6 +52,9 @@ function ProductDetail({
   }, [modalOpen])
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    // Solo funcionar en pantallas grandes (desktop)
+    if (window.innerWidth < 1024) return
+    
     if (!imageContainerRef.current || !zoomPopupRef.current) return
     
     // Cancelar animación anterior si existe
@@ -104,6 +107,9 @@ function ProductDetail({
   }
 
   const handleMouseEnter = () => {
+    // Solo activar zoom en pantallas grandes (desktop)
+    if (window.innerWidth < 1024) return
+    
     // Limpiar cache del rect al entrar
     rectRef.current = null
     setZoomVisible(true)
