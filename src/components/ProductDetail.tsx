@@ -31,9 +31,14 @@ function ProductDetail({
   const [active, setActive] = useState<string>(safeThumbs[0])
   const [tab, setTab] = useState<'producto' | 'imagenes'>('producto')
   const [modalOpen, setModalOpen] = useState(false)
+  const [zoomVisible, setZoomVisible] = useState(false)
   const dialogTitleId = useId()
   const closeBtnRef = useRef<HTMLButtonElement | null>(null)
   const lastFocusRef = useRef<HTMLElement | null>(null)
+  const imageContainerRef = useRef<HTMLDivElement | null>(null)
+  const zoomPopupRef = useRef<HTMLDivElement | null>(null)
+  const animationFrameRef = useRef<number | null>(null)
+  const rectRef = useRef<DOMRect | null>(null)
 
   useEffect(() => {
     if (modalOpen) {
@@ -45,6 +50,89 @@ function ProductDetail({
       lastFocusRef.current?.focus()
     }
   }, [modalOpen])
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!imageContainerRef.current || !zoomPopupRef.current) return
+    
+    // Cancelar animación anterior si existe
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+    }
+    
+    // Usar requestAnimationFrame para optimizar el rendimiento
+    animationFrameRef.current = requestAnimationFrame(() => {
+      if (!imageContainerRef.current || !zoomPopupRef.current) return
+      
+      // Cachear el rect para evitar recálculos
+      if (!rectRef.current) {
+        rectRef.current = imageContainerRef.current.getBoundingClientRect()
+      }
+      
+      const rect = rectRef.current
+      const x = ((e.clientX - rect.left) / rect.width) * 100
+      const y = ((e.clientY - rect.top) / rect.height) * 100
+      
+      const popup = zoomPopupRef.current
+      
+      // Actualizar posición del zoom instantáneamente
+      popup.style.setProperty('--zoom-x', `${x}%`)
+      popup.style.setProperty('--zoom-y', `${y}%`)
+      
+      // Posicionar el popup a la derecha de la imagen
+      const offset = 20
+      const popupSize = 400
+      const windowHeight = window.innerHeight
+      
+      // Obtener la posición del contenedor de la imagen
+      const imageRect = imageContainerRef.current.getBoundingClientRect()
+      
+      // Posicionar a la derecha de la imagen
+      const left = imageRect.right + offset
+      let top = imageRect.top + (imageRect.height / 2) - (popupSize / 2)
+      
+      // Ajustar si se sale de la pantalla
+      if (top + popupSize > windowHeight) {
+        top = windowHeight - popupSize - offset
+      }
+      if (top < offset) {
+        top = offset
+      }
+      
+      popup.style.left = `${left}px`
+      popup.style.top = `${top}px`
+    })
+  }
+
+  const handleMouseEnter = () => {
+    // Limpiar cache del rect al entrar
+    rectRef.current = null
+    setZoomVisible(true)
+  }
+
+  const handleMouseLeave = () => {
+    // Limpiar animación pendiente
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+      animationFrameRef.current = null
+    }
+    setZoomVisible(false)
+  }
+
+  // Inicializar la imagen del zoom cuando cambie la imagen activa
+  useEffect(() => {
+    if (zoomPopupRef.current) {
+      zoomPopupRef.current.style.setProperty('--bg-image', `url(${active})`)
+    }
+  }, [active])
+
+  // Cleanup de animaciones al desmontar el componente
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+    }
+  }, [])
 
   return (
     <section className="container mx-auto px-4">
@@ -73,12 +161,19 @@ function ProductDetail({
       <div className="mt-5 flex flex-col lg:flex-row gap-6">
         <div className="lg:w-1/2">
           <div className="bg-white rounded shadow-sm p-4">
-            <div className="w-full h-[340px] md:h-[420px] flex items-center justify-center overflow-hidden">
+            {/* Imagen principal */}
+            <div 
+              ref={imageContainerRef}
+              className="relative w-full h-[340px] md:h-[420px] flex items-center justify-center overflow-hidden cursor-zoom-in bg-gray-50 rounded-lg"
+              onMouseMove={handleMouseMove}
+              onMouseEnter={handleMouseEnter}
+              onMouseLeave={handleMouseLeave}
+              onClick={() => setModalOpen(true)}
+            >
               <img
                 src={active}
                 alt="Imagen del producto"
-                className="max-h-full max-w-full object-contain cursor-zoom-in"
-                onClick={() => setModalOpen(true)}
+                className="max-h-full max-w-full object-contain"
               />
             </div>
             <div className="flex gap-3 mt-4 justify-center">
@@ -177,6 +272,13 @@ function ProductDetail({
           </div>
         </div>
       </div>
+
+      {/* Popup de zoom flotante */}
+      <div 
+        ref={zoomPopupRef}
+        className={`zoom-popup ${zoomVisible ? 'active visible' : 'hidden'}`}
+        aria-label="Vista ampliada del producto"
+      />
 
       {modalOpen && (
         <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby={dialogTitleId}>
